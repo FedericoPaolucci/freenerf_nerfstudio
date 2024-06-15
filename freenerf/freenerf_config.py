@@ -1,11 +1,13 @@
 """
 Nerfstudio Template Config
 modificato per freenerf
+
+contiene il metodo che verrà richiamato da nerfstudio
 """
 
 from __future__ import annotations
 
-#da modificare con quanto serve per freenerf
+# TODO: da modificare con quanto serve per freenerf
 '''
 from method_template.template_datamanager import (
     TemplateDataManagerConfig,
@@ -36,12 +38,12 @@ freenerf_method = MethodSpecification(
         max_num_iterations=30000, #numero massimo di iterazioni di training
         mixed_precision=True, #precisione mista (riduce utilizzo di memoria)
         pipeline=TemplatePipelineConfig( # TODO: CONFIGURAZIONE PIPELINE DA MODIFICARE
-            datamanager=TemplateDataManagerConfig(
-                dataparser=NerfstudioDataParserConfig(),
+            datamanager=TemplateDataManagerConfig( # TODO: datamanager custom
+                dataparser=NerfstudioDataParserConfig(), # TODO: dataparser di nerfstudio?
                 train_num_rays_per_batch=4096,
                 eval_num_rays_per_batch=4096,
             ),
-            model=TemplateModelConfig(
+            model=TemplateModelConfig( # TODO: model custom
                 eval_num_rays_per_chunk=1 << 15,
             ),
         ),
