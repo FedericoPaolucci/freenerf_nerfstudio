@@ -20,6 +20,7 @@ from method_template.template_pipeline import (
 
 from nerfstudio.configs.base_config import ViewerConfig #configura il viewer
 from nerfstudio.data.dataparsers.nerfstudio_dataparser import NerfstudioDataParserConfig #configura il parser
+from nerfstudio.data.datamanagers.base_datamanager import VanillaDataManagerConfig #configura il datamanager
 from nerfstudio.engine.optimizers import AdamOptimizerConfig, RAdamOptimizerConfig #configura l'ottimizzatore
 from nerfstudio.engine.schedulers import ( 
     ExponentialDecaySchedulerConfig, #configura lo scheduler
@@ -38,8 +39,8 @@ freenerf_method = MethodSpecification(
         max_num_iterations=30000, #numero massimo di iterazioni di training
         mixed_precision=True, #precisione mista (riduce utilizzo di memoria)
         pipeline=TemplatePipelineConfig( # TODO: CONFIGURAZIONE PIPELINE DA MODIFICARE
-            datamanager=TemplateDataManagerConfig( # TODO: datamanager custom
-                dataparser=NerfstudioDataParserConfig(), # TODO: dataparser di nerfstudio?
+            datamanager=VanillaDataManagerConfig(
+                dataparser=NerfstudioDataParserConfig(), # datamanager e dataparser di nerfstudio?
                 train_num_rays_per_batch=4096,
                 eval_num_rays_per_batch=4096,
             ),
