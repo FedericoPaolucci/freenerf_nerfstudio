@@ -59,7 +59,41 @@ class FreenerfModelModel(NerfactoModel): # TODO: modificare con custom
     config: FreenerfModelConfig
 
     def populate_modules(self):
-        super().populate_modules()
+        """Set the fields and modules."""
+
+        # Fields
+
+        # Ray Samplers
+
+        # Colliders
+
+        # Renderers
+
+        # Losses
+
+        # Metrics
+
+    def get_param_groups(self) -> Dict[str, List[Parameter]]:
+        """Returns the parameter groups needed to optimizer your model components."""
+
+    def get_training_callbacks(
+            self, training_callback_attributes: TrainingCallbackAttributes
+        ) -> List[TrainingCallback]:
+        """Returns the training callbacks, such as updating a density grid for Instant NGP."""
+
+    def get_outputs(self, ray_bundle: RayBundle):
+        """Process a RayBundle object and return RayOutputs describing quanties for each ray."""
+
+    def get_metrics_dict(self, outputs, batch):
+        """Returns metrics dictionary which will be plotted with comet, wandb or tensorboard."""
+
+    def get_loss_dict(self, outputs, batch, metrics_dict=None):
+        """Returns a dictionary of losses to be summed which will be your loss."""
+
+    def get_image_metrics_and_images(
+        self, outputs: Dict[str, torch.Tensor], batch: Dict[str, torch.Tensor]
+    ) -> Tuple[Dict[str, float], Dict[str, torch.Tensor]]:
+        """Returns a dictionary of images and metrics to plot. Here you can apply your colormaps."""
 
     # TODO: Override any potential functions/methods to implement your own method
     # or subclass from "Model" and define all mandatory fields.

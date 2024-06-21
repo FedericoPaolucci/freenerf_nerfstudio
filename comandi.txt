@@ -10,4 +10,6 @@ docker run --gpus all \                                         # Give the conta
             <--- OR --->
             nerfstudio 
 
-sudo docker run --gpus all -v /mnt/d/ComputerVision/nerfstudiodocker/nerfstudio:/workspace/ -p 7007:7007 --rm -it --shm-size=12gb b9b42a914cab
+sudo docker run --gpus all -v /mnt/d/ComputerVision/nerfstudiodocker/nerfstudio:/workspace/ -p 7007:7007 --rm -it --shm-size=12gb eb27cdddf5ac
+
+conda activate freenerf
