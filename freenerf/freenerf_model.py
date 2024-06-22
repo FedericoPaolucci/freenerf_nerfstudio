@@ -29,7 +29,7 @@ class FreeNeRFModelConfig(VanillaModelConfig): # TODO: modificare con custom
 
     _target: Type = field(default_factory=lambda: FreeNeRFModel)
     
-    position_encoding_num_frequencies: int = 10
+    position_encoding_num_frequencies: int = 10 #16
     """Number of frequencies for positional encoding"""
 
     direction_encoding_num_frequencies: int = 4
@@ -70,6 +70,7 @@ class FreeNeRFModel(NeRFModel): # TODO: modificare con custom
             in_dim=3, num_frequencies=self.config.direction_encoding_num_frequencies, min_freq_exp=0.0, include_input=True, implementation="tcnn"
         )
 
+        # sono ricreati i fields modificati con encoding freenerf
         self.field_coarse = NeRFField(
             position_encoding=position_encoding,
             direction_encoding=direction_encoding,
@@ -96,17 +97,19 @@ class FreeNeRFModel(NeRFModel): # TODO: modificare con custom
     def get_training_callbacks(
         self, training_callback_attributes: TrainingCallbackAttributes
     ) -> List[TrainingCallback]:
-        """Returns the training callbacks, such as updating a density grid for Instant NGP."""
+        """callbacks eseguiti prima di ogni iterazione di training"""
+
+        # imposta lo step e i ratio
         def set_step(step: int) -> None:
-            self.step = step
-            self.field_coarse.position_encoding.set_ratio_x(step / self.config.T)
-            self.field_coarse.direction_encoding.set_ratio_x(step / self.config.T)
+            self.step = step # imposta lo step attuale
+            self.field_coarse.position_encoding.set_ratio_x(step / self.config.T) # set del ratio con t/T che nell'encoding verrà moltiplicato per L come da paper freenerf
+            self.field_coarse.direction_encoding.set_ratio_x(step / self.config.T) # set del ratio come sopra
 
         return [
             TrainingCallback(
                 where_to_run=[TrainingCallbackLocation.BEFORE_TRAIN_ITERATION],
                 update_every_num_iters=1,
-                func=set_step,
+                func=set_step, # richiamata funzione PRIMA di ogni iterazione
             ),
         ]
 
@@ -118,6 +121,7 @@ class FreeNeRFModel(NeRFModel): # TODO: modificare con custom
 
     def get_loss_dict(self, outputs, batch, metrics_dict=None):
         """Returns a dictionary of losses to be summed which will be your loss."""
+        # TODO
 
     # prende quello di vanilla nerf
     '''def get_image_metrics_and_images(
