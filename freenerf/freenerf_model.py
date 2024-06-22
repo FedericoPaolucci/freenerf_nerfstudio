@@ -14,10 +14,11 @@ from nerfstudio.engine.callbacks import (
     TrainingCallbackAttributes,
     TrainingCallbackLocation,
 )
+from nerfstudio.model_components.losses import MSELoss, scale_gradients_by_distance_squared
 from .freenerf_encoding import FreeNeRFEncoding
 
 @dataclass
-class FreeNeRFModelConfig(VanillaModelConfig): # TODO: modificare con custom
+class FreeNeRFModelConfig(VanillaModelConfig):
     """Vanilla Model Config"""
 
     _target: Type = field(default_factory=lambda: FreeNeRFModel)
@@ -32,7 +33,7 @@ class FreeNeRFModelConfig(VanillaModelConfig): # TODO: modificare con custom
     """Number of training steps (must equal to max-num-iterations)"""
 
 
-class FreeNeRFModel(NeRFModel): # TODO: modificare con custom
+class FreeNeRFModel(NeRFModel):
     """Template Model."""
 
     config: FreeNeRFModelConfig
@@ -80,13 +81,17 @@ class FreeNeRFModel(NeRFModel): # TODO: modificare con custom
 
         # Renderers
 
-        # TODO: Losses
+        # Losses
+        self.rgb_loss = MSELoss() #gia messa in vanilla_nerf però l'ho riaggiunta...
 
         # Metrics
-
+    
+    # get_param_groups -> prende quello di vanilla nerf
+    '''
     def get_param_groups(self) -> Dict[str, List[Parameter]]:
         """Returns the parameter groups needed to optimizer your model components."""
-
+     '''
+    
     def get_training_callbacks(
         self, training_callback_attributes: TrainingCallbackAttributes
     ) -> List[TrainingCallback]:
@@ -106,17 +111,21 @@ class FreeNeRFModel(NeRFModel): # TODO: modificare con custom
             ),
         ]
 
+    # get_outputs -> prende quello di vanilla nerf
+    '''
     def get_outputs(self, ray_bundle: RayBundle):
         """Process a RayBundle object and return RayOutputs describing quanties for each ray."""
+    '''
 
     def get_metrics_dict(self, outputs, batch):
         """Returns metrics dictionary which will be plotted with comet, wandb or tensorboard."""
+        # TODO ? forse no perchè serve per valutare l'efficacia del modello??
 
     def get_loss_dict(self, outputs, batch, metrics_dict=None):
         """Returns a dictionary of losses to be summed which will be your loss."""
         # TODO
 
-    # prende quello di vanilla nerf
+    # get_image_mertrics_and_images -> prende quello di vanilla nerf
     '''def get_image_metrics_and_images(
         self, outputs: Dict[str, torch.Tensor], batch: Dict[str, torch.Tensor] #se usati bisogna dichiarare le dipendenze
     ) -> Tuple[Dict[str, float], Dict[str, torch.Tensor]]:
