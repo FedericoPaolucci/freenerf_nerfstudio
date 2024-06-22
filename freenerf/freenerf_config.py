@@ -1,6 +1,5 @@
 """
-Nerfstudio Template Config
-modificato per freenerf
+config per FreeNeRF
 
 contiene il metodo che verrà richiamato da nerfstudio
 """

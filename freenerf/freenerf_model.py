@@ -1,12 +1,5 @@
 """
-Template Model File
-da modificare per freenerf
-
-Currently this subclasses the Nerfacto model. Consider subclassing from the base Model.
-
-NerfStudio Methods typically only change the model code.
-A model, at a high level, takes in regions of space described by RayBundle objects, 
-samples points along these rays, and returns rendered values for each ray.
+Modello FreeNeRF
 """
 
 from __future__ import annotations
