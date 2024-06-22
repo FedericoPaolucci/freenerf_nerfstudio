@@ -109,7 +109,7 @@ class FreeNeRFModel(NeRFModel): # TODO: modificare con custom
             TrainingCallback(
                 where_to_run=[TrainingCallbackLocation.BEFORE_TRAIN_ITERATION],
                 update_every_num_iters=1,
-                func=set_step, # richiamata funzione PRIMA di ogni iterazione
+                func=set_step, # richiama funzione PRIMA di ogni iterazione (l'argomento sarà il numero di step come da classe TrainingCallback)
             ),
         ]
 

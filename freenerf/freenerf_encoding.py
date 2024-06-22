@@ -71,7 +71,7 @@ class FreeNeRFEncoding(NeRFEncoding):
     def L(self) -> int: #parametro L nella formula
         return self.num_frequencies
     
-    # il metodo restituisce il tensore weights (1D) modificato in base al ratio e ad L
+    # il metodo restituisce il tensore weights modificato in base al ratio e ad L
     @torch.no_grad()
     def get_weights(self) -> Float[Tensor, "1 output_dim"]: # tensore di dimensione 1 con lunghezza output_dim
         weights = torch.ones((self.L,), dtype=torch.float32) # tensore di lunghezza L di 1
