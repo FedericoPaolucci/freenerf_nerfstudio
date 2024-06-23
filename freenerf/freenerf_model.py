@@ -15,6 +15,7 @@ from nerfstudio.engine.callbacks import (
     TrainingCallbackLocation,
 )
 from nerfstudio.model_components.losses import MSELoss, scale_gradients_by_distance_squared
+from nerfstudio.utils import colormaps, misc
 from .freenerf_encoding import FreeNeRFEncoding
 
 @dataclass
@@ -123,7 +124,29 @@ class FreeNeRFModel(NeRFModel):
 
     def get_loss_dict(self, outputs, batch, metrics_dict=None):
         """Returns a dictionary of losses to be summed which will be your loss."""
-        # TODO
+        # Impostazione device e immagine di input
+        device = outputs["rgb_coarse"].device
+        image = batch["image"].to(device)
+        # preparazione delle immagini per la loss
+        coarse_pred, coarse_image = self.renderer_rgb.blend_background_for_loss_computation(
+            pred_image=outputs["rgb_coarse"],
+            pred_accumulation=outputs["accumulation_coarse"],
+            gt_image=image,
+        )
+        fine_pred, fine_image = self.renderer_rgb.blend_background_for_loss_computation(
+            pred_image=outputs["rgb_fine"],
+            pred_accumulation=outputs["accumulation_fine"],
+            gt_image=image,
+        )
+        # calcolo loss 
+        rgb_loss_coarse = self.rgb_loss(coarse_image, coarse_pred) # MSELoss (ground trouth e predizione)
+        rgb_loss_fine = self.rgb_loss(fine_image, fine_pred)
+        # creazione dict
+        loss_dict = {"rgb_loss_coarse": rgb_loss_coarse, "rgb_loss_fine": rgb_loss_fine}
+        # TODO: aggiunta al dict di una voce per occlusion regulation loss (TODO: creare file per calcolo loss)
+        # scalatura loss
+        loss_dict = misc.scale_dict(loss_dict, self.config.loss_coefficients)
+        return loss_dict
 
     # get_image_mertrics_and_images -> prende quello di vanilla nerf
     '''def get_image_metrics_and_images(
