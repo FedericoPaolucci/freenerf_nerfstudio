@@ -18,6 +18,7 @@ from nerfstudio.model_components.losses import MSELoss, scale_gradients_by_dista
 from nerfstudio.utils import colormaps, misc
 from nerfstudio.cameras.rays import RayBundle
 from nerfstudio.field_components.field_heads import FieldHeadNames
+from nerfstudio.configs.config_utils import to_immutable_dict
 from .freenerf_loss import occ_reg_loss_fn
 from .freenerf_encoding import FreeNeRFEncoding
 
@@ -29,12 +30,12 @@ class FreeNeRFModelConfig(VanillaModelConfig):
     
     position_encoding_num_frequencies: int = 10 #16
     """Number of frequencies for positional encoding"""
-
     direction_encoding_num_frequencies: int = 4
     """Number of frequencies for directional encoding"""
-
     T: int = 30000
     """Number of training steps (must equal to max-num-iterations)"""
+    loss_coefficients: Dict[str, float] = to_immutable_dict({"occ_reg_loss": 0.01}) #aggiunge una voce al dict già esistente da base_model
+    """occlusion reg loss molt"""
 
 
 class FreeNeRFModel(NeRFModel):
@@ -204,7 +205,6 @@ class FreeNeRFModel(NeRFModel):
         rgb_loss_fine = self.rgb_loss(fine_image, fine_pred)
         # occlusion regulation loss
         occ_reg_loss = occ_reg_loss_fn(outputs["rgb"], outputs["density"])
-        # TODO: aggiungere moltiplicatore
         # creazione dict
         loss_dict = {"rgb_loss_coarse": rgb_loss_coarse, "rgb_loss_fine": rgb_loss_fine, "occ_reg_loss": occ_reg_loss}
         # scalatura loss
