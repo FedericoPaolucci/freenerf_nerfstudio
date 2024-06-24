@@ -16,6 +16,9 @@ from nerfstudio.engine.callbacks import (
 )
 from nerfstudio.model_components.losses import MSELoss, scale_gradients_by_distance_squared
 from nerfstudio.utils import colormaps, misc
+from nerfstudio.cameras.rays import RayBundle
+from nerfstudio.field_components.field_heads import FieldHeadNames
+from .freenerf_loss import occ_reg_loss_fn
 from .freenerf_encoding import FreeNeRFEncoding
 
 @dataclass
@@ -35,7 +38,6 @@ class FreeNeRFModelConfig(VanillaModelConfig):
 
 
 class FreeNeRFModel(NeRFModel):
-    """Template Model."""
 
     config: FreeNeRFModelConfig
 
@@ -83,7 +85,7 @@ class FreeNeRFModel(NeRFModel):
         # Renderers
 
         # Losses
-        self.rgb_loss = MSELoss() #gia messa in vanilla_nerf però l'ho riaggiunta...
+        self.rgb_loss = MSELoss()
 
         # Metrics
     
@@ -112,15 +114,74 @@ class FreeNeRFModel(NeRFModel):
             ),
         ]
 
-    # get_outputs -> prende quello di vanilla nerf
-    '''
+    # get_outputs per aggiungere gli output per occ reg loss
     def get_outputs(self, ray_bundle: RayBundle):
         """Process a RayBundle object and return RayOutputs describing quanties for each ray."""
-    '''
+        if self.field_coarse is None or self.field_fine is None:
+            raise ValueError("populate_fields() must be called before get_outputs")
 
-    def get_metrics_dict(self, outputs, batch):
+        # uniform sampling
+        ray_samples_uniform = self.sampler_uniform(ray_bundle)
+        if self.temporal_distortion is not None:
+            offsets = None
+            if ray_samples_uniform.times is not None:
+                offsets = self.temporal_distortion(
+                    ray_samples_uniform.frustums.get_positions(), ray_samples_uniform.times
+                )
+            ray_samples_uniform.frustums.set_offsets(offsets)
+
+        # coarse field:
+        field_outputs_coarse = self.field_coarse.forward(ray_samples_uniform)
+        if self.config.use_gradient_scaling:
+            field_outputs_coarse = scale_gradients_by_distance_squared(field_outputs_coarse, ray_samples_uniform)
+        weights_coarse = ray_samples_uniform.get_weights(field_outputs_coarse[FieldHeadNames.DENSITY])
+        rgb_coarse = self.renderer_rgb(
+            rgb=field_outputs_coarse[FieldHeadNames.RGB],
+            weights=weights_coarse,
+        )
+        accumulation_coarse = self.renderer_accumulation(weights_coarse)
+        depth_coarse = self.renderer_depth(weights_coarse, ray_samples_uniform)
+
+        # pdf sampling
+        ray_samples_pdf = self.sampler_pdf(ray_bundle, ray_samples_uniform, weights_coarse)
+        if self.temporal_distortion is not None:
+            offsets = None
+            if ray_samples_pdf.times is not None:
+                offsets = self.temporal_distortion(ray_samples_pdf.frustums.get_positions(), ray_samples_pdf.times)
+            ray_samples_pdf.frustums.set_offsets(offsets)
+
+        # fine field:
+        field_outputs_fine = self.field_fine.forward(ray_samples_pdf)
+        if self.config.use_gradient_scaling:
+            field_outputs_fine = scale_gradients_by_distance_squared(field_outputs_fine, ray_samples_pdf)
+        weights_fine = ray_samples_pdf.get_weights(field_outputs_fine[FieldHeadNames.DENSITY])
+        rgb_fine = self.renderer_rgb(
+            rgb=field_outputs_fine[FieldHeadNames.RGB],
+            weights=weights_fine,
+        )
+        accumulation_fine = self.renderer_accumulation(weights_fine)
+        depth_fine = self.renderer_depth(weights_fine, ray_samples_pdf)
+
+        # per occlusion reg loss
+        rgb = field_outputs_fine[FieldHeadNames.RGB]
+        density = field_outputs_fine[FieldHeadNames.DENSITY]
+
+        outputs = {
+            "rgb_coarse": rgb_coarse,
+            "rgb_fine": rgb_fine,
+            "accumulation_coarse": accumulation_coarse,
+            "accumulation_fine": accumulation_fine,
+            "depth_coarse": depth_coarse,
+            "depth_fine": depth_fine,
+            "rgb": rgb,
+            "density": density
+        }
+        return outputs
+
+    # get_metrics_dict -> vanilla nerf
+    '''def get_metrics_dict(self, outputs, batch):
         """Returns metrics dictionary which will be plotted with comet, wandb or tensorboard."""
-        # TODO ? forse no perchè serve per valutare l'efficacia del modello??
+    '''
 
     def get_loss_dict(self, outputs, batch, metrics_dict=None):
         """Returns a dictionary of losses to be summed which will be your loss."""
@@ -139,11 +200,13 @@ class FreeNeRFModel(NeRFModel):
             gt_image=image,
         )
         # calcolo loss 
-        rgb_loss_coarse = self.rgb_loss(coarse_image, coarse_pred) # MSELoss (ground trouth e predizione)
+        rgb_loss_coarse = self.rgb_loss(coarse_image, coarse_pred) # MSELoss (ground truth e predizione)
         rgb_loss_fine = self.rgb_loss(fine_image, fine_pred)
+        # occlusion regulation loss
+        occ_reg_loss = occ_reg_loss_fn(outputs["rgb"], outputs["density"])
+        # TODO: aggiungere moltiplicatore
         # creazione dict
-        loss_dict = {"rgb_loss_coarse": rgb_loss_coarse, "rgb_loss_fine": rgb_loss_fine}
-        # TODO: aggiunta al dict di una voce per occlusion regulation loss (TODO: creare file per calcolo loss)
+        loss_dict = {"rgb_loss_coarse": rgb_loss_coarse, "rgb_loss_fine": rgb_loss_fine, "occ_reg_loss": occ_reg_loss}
         # scalatura loss
         loss_dict = misc.scale_dict(loss_dict, self.config.loss_coefficients)
         return loss_dict

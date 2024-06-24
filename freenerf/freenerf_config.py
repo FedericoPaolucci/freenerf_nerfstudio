@@ -6,7 +6,7 @@ contiene il metodo che verrà richiamato da nerfstudio
 
 from __future__ import annotations
 
-# TODO: da modificare con quanto serve per freenerf
+# da modificare con quanto serve per freenerf
 '''
 from method_template.template_datamanager import (
     TemplateDataManagerConfig,
@@ -26,6 +26,8 @@ from nerfstudio.engine.schedulers import (
 )
 from nerfstudio.engine.trainer import TrainerConfig #configura il trainer
 from nerfstudio.plugins.types import MethodSpecification #configura il metodo
+from nerfstudio.pipelines.base_pipeline import VanillaPipelineConfig
+from .freenerf_model import FreeNeRFModel
 
 '''
 metodo freenerf_method che verrà richiamato da nerfstudio
@@ -37,29 +39,24 @@ freenerf_method = MethodSpecification(
         steps_per_save=2000, #numero di passi tra ogni save
         max_num_iterations=30000, #numero massimo di iterazioni di training
         mixed_precision=True, #precisione mista (riduce utilizzo di memoria)
-        pipeline=TemplatePipelineConfig( # TODO: CONFIGURAZIONE PIPELINE DA MODIFICARE
+        pipeline=VanillaPipelineConfig( 
             datamanager=VanillaDataManagerConfig(
-                dataparser=NerfstudioDataParserConfig(), # datamanager e dataparser di nerfstudio?
+                dataparser=NerfstudioDataParserConfig(), # datamanager e dataparser di nerfstudio
                 train_num_rays_per_batch=4096,
                 eval_num_rays_per_batch=4096,
             ),
-            model=TemplateModelConfig( # TODO: model custom
+            model=FreeNeRFModel(
                 eval_num_rays_per_chunk=1 << 15,
             ),
         ),
         optimizers={
-            # TODO: consider changing optimizers depending on your custom method
-            "proposal_networks": {
-                "optimizer": AdamOptimizerConfig(lr=1e-2, eps=1e-15), #ottimizzatore Adam con learning rate e epsilon
-                "scheduler": ExponentialDecaySchedulerConfig(lr_final=0.0001, max_steps=200000), #decadimento learning rate
-            },
             "fields": {
-                "optimizer": RAdamOptimizerConfig(lr=1e-2, eps=1e-15), #RAdam
-                "scheduler": ExponentialDecaySchedulerConfig(lr_final=1e-4, max_steps=50000),
+                "optimizer": RAdamOptimizerConfig(lr=5e-4, eps=1e-08),
+                "scheduler": None,
             },
-            "camera_opt": {
-                "optimizer": AdamOptimizerConfig(lr=1e-3, eps=1e-15), #ottimizzatore camera
-                "scheduler": ExponentialDecaySchedulerConfig(lr_final=1e-4, max_steps=5000),
+            "temporal_distortion": {
+                "optimizer": RAdamOptimizerConfig(lr=5e-4, eps=1e-08),
+                "scheduler": None,
             },
         },
         viewer=ViewerConfig(num_rays_per_chunk=1 << 15), #viewer config
