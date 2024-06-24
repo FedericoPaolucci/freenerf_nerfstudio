@@ -1,0 +1,27 @@
+###Hyper-parameters###
+
+##Frequency regulation##
+
+#End iteration of frequency regularition#
+"Numero di iterazioni di training su cui si applica la regolazione lineare della frequenza"
+T= [x% * total_iters]
+
+"masking ratio, range della banda delle frequenze visibili"
+x=90 if 3-view-settings
+x=70 if 6-view-settings
+x=20 if 9-view-settings
+
+##Occlution Regulation##
+
+#Regualtion Range#
+"" Valore M del binary mask (mk) nella formula della Locc, rappresenta
+ M-esimo punto lungo il raggio, vicino alla camera, da penalizzare"
+M=10 for DTU
+M=15 for DTU and black-white
+**NOTA**=Reducing the regularition range if Locc can ease the issue of over-regularition in some scenes. i.e. used M=5 
+
+loss_coefficient=0.01 #peso dato alla penalizzazione dei punti
+
+
+###For comparison experiments###
+batch_size=1024 instead of 4096
