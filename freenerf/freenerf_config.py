@@ -16,7 +16,7 @@ from nerfstudio.engine.schedulers import (
 from nerfstudio.engine.trainer import TrainerConfig #configura il trainer
 from nerfstudio.plugins.types import MethodSpecification #configura il metodo
 from nerfstudio.pipelines.base_pipeline import VanillaPipelineConfig
-from .freenerf_model import FreeNeRFModel
+from .freenerf_model import FreeNeRFModelConfig
 
 '''
 metodo freenerf_method che verrà richiamato da nerfstudio
@@ -34,9 +34,7 @@ freenerf_method = MethodSpecification(
                 train_num_rays_per_batch=4096,
                 eval_num_rays_per_batch=4096,
             ),
-            model=FreeNeRFModel(
-                eval_num_rays_per_chunk=1 << 15,
-            ),
+            model=FreeNeRFModelConfig(),
         ),
         optimizers={
             "fields": {
