@@ -7,4 +7,4 @@ dependencies=[
 ]
 
 [project.entry-points.'nerfstudio.method_configs']
-freenerf = 'freenerf.freenerf_config:freenerfacto_method'
+freenerf = 'freenerf.freenerf_config:freenerf_method'

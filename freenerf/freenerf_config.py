@@ -6,17 +6,6 @@ contiene il metodo che verrà richiamato da nerfstudio
 
 from __future__ import annotations
 
-# da modificare con quanto serve per freenerf
-'''
-from method_template.template_datamanager import (
-    TemplateDataManagerConfig,
-)
-from method_template.template_model import TemplateModelConfig
-from method_template.template_pipeline import (
-    TemplatePipelineConfig,
-)
-'''
-
 from nerfstudio.configs.base_config import ViewerConfig #configura il viewer
 from nerfstudio.data.dataparsers.nerfstudio_dataparser import NerfstudioDataParserConfig #configura il parser
 from nerfstudio.data.datamanagers.base_datamanager import VanillaDataManagerConfig #configura il datamanager
