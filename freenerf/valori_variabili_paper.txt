@@ -1,3 +1,9 @@
+###Implementation for RegNeRFCodebase###
+-MipNeRF used as baseline
+-maximum input frequency of coordinates=16
+-Concatenation of original coordinates into positional encodings
+-NeRf model trained with Adam optimizat with exponantial learning rate from: 2*10^-3 to 2*10^-5, 512 warm-up steps with a 0.01 multiplier
+-Nerf model optimized for 500 epoches with bacth size of 4096. Result in 44k,88k,132k training iteration for 3/6/9 input views
 ###Hyper-parameters###
 
 ##Frequency regulation##
