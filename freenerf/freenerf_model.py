@@ -28,14 +28,20 @@ class FreeNeRFModelConfig(VanillaModelConfig):
 
     _target: Type = field(default_factory=lambda: FreeNeRFModel)
     
-    position_encoding_num_frequencies: int = 10 #16
+    position_encoding_num_frequencies: int = 16 #10
     """Number of frequencies for positional encoding"""
     direction_encoding_num_frequencies: int = 4
     """Number of frequencies for directional encoding"""
     T: int = 30000
     """Number of training steps (must equal to max-num-iterations)"""
-    loss_coefficients: Dict[str, float] = to_immutable_dict({"occ_reg_loss": 0.01}) #aggiunge una voce al dict già esistente da base_model
-    """occlusion reg loss molt"""
+    loss_coefficients: Dict[str, float] = to_immutable_dict({"rgb_loss_coarse": 1.0, "rgb_loss_fine": 1.0, "occ_reg_loss": 0.01})
+    """loss coefficient and Occlusion reg loss molt"""
+    reg_range = 10
+    """Number of initial intervals to include in the regularization mask (occ reg loss)"""
+    wb_prior = False
+    """If True, a prior based on the assumption of white or black backgrounds is used (occ reg loss)"""
+    wb_range=20
+    """Range of RGB values considered to be a white or black background (occ reg loss)"""
 
 
 class FreeNeRFModel(NeRFModel):
@@ -204,7 +210,7 @@ class FreeNeRFModel(NeRFModel):
         rgb_loss_coarse = self.rgb_loss(coarse_image, coarse_pred) # MSELoss (ground truth e predizione)
         rgb_loss_fine = self.rgb_loss(fine_image, fine_pred)
         # occlusion regulation loss
-        occ_reg_loss = occ_reg_loss_fn(outputs["rgb"], outputs["density"])
+        occ_reg_loss = occ_reg_loss_fn(outputs["rgb"], outputs["density"], reg_range=self.config.reg_range, wb_prior=self.config.wb_prior, wb_range=self.config.wb_range)
         # creazione dict
         loss_dict = {"rgb_loss_coarse": rgb_loss_coarse, "rgb_loss_fine": rgb_loss_fine, "occ_reg_loss": occ_reg_loss}
         # scalatura loss
