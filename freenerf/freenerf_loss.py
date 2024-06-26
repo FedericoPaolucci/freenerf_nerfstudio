@@ -29,6 +29,9 @@ def occ_reg_loss_fn(rgb, density, reg_range=10, wb_prior=False, wb_range=20):
     # Create a mask for the general regularization region
     if reg_range > 0:
         rgb_mask[:, :reg_range] = 1  # Penalize the points in reg_range close to the camera
+    
+    #rgb_mask_expanded = rgb_mask.unsqueeze(-1)  # Aggiunge una dimensione alla fine
+    density_squeezed = density.squeeze(-1) # toglie la dimensione alla fine
 
     # Compute the density-weighted loss within the regularization and white/black background mask
-    return torch.mean(density * rgb_mask)
+    return torch.mean(density_squeezed * rgb_mask)
