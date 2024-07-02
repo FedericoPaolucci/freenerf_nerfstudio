@@ -179,7 +179,7 @@ class FreeNeRFModel(NeRFModel):
             "accumulation_coarse": accumulation_coarse,
             "accumulation_fine": accumulation_fine,
             "depth_coarse": depth_coarse,
-            "depth": depth_fine,
+            "depth": depth_fine, #depth_fine
             "rgb": rgb,
             "density": density
         }
@@ -222,6 +222,7 @@ class FreeNeRFModel(NeRFModel):
         self, outputs: Dict[str, torch.Tensor], batch: Dict[str, torch.Tensor] #se usati bisogna dichiarare le dipendenze
     ) -> Tuple[Dict[str, float], Dict[str, torch.Tensor]]:
         """Returns a dictionary of images and metrics to plot. Here you can apply your colormaps.""" '''
+    #plot loss
 
     # TODO: Override any potential functions/methods to implement your own method
     # or subclass from "Model" and define all mandatory fields.
