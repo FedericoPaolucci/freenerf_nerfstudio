@@ -42,4 +42,9 @@ Input view for 6-view-setting image IDs:40,44,48,0,8,13
 
 Images IDs for novel views evaluation: [1,2,9,10,11,12,14,15,23,24,26,27,29,30,31,32,33,34,35,41,42,43,45,46,47]
 
+"""su file config di FreeNeRF viene indicato quale parametro di luce riferito all'immagine viene preso"""
+dtu_max_images = 49
+dtu_light_cond=3
+ se dtu_light_cond <  7 && dtu_max_images < 50
+ allora usa immagini con rect_000_3_r5000.png
 E' usato un 4x downsampled resolution, risultato si ha 300x400 pixels per ogni immagine.
