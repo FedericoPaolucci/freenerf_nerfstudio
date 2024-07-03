@@ -180,6 +180,7 @@ class FreeNeRFModel(NeRFModel):
             "accumulation_fine": accumulation_fine,
             "depth_coarse": depth_coarse,
             "depth_fine": depth_fine,
+            "depth": depth_fine,
             "rgb": rgb,
             "density": density
         }
