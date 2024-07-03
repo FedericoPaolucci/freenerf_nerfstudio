@@ -186,7 +186,7 @@ class FreeNeRFModel(NeRFModel):
             "accumulation_coarse": accumulation_coarse,
             "accumulation_fine": accumulation_fine,
             "depth_coarse": depth_coarse,
-            "depth": depth_fine,
+            "depth_fine": depth_fine,
             "rgb": rgb,
             "density": density
         }
@@ -198,8 +198,13 @@ class FreeNeRFModel(NeRFModel):
         metrics_dict = {}
         gt_rgb = batch["image"].to(self.device)
         predicted_rgb = outputs["rgb"]
-        mask = batch['mask'] #Maschera binaria che indica le regioni foreground.
+        mask = batch["mask"] #Maschera binaria che indica le regioni foreground.
         mask_bin = (mask == 1.) #Maschera binaria con valori booleani.
+        # Assicurati che il tensore di maschera sia su cuda:0
+        mask = mask.to('cuda:0')
+
+        # Sposta anche gt_rgb su cuda:0
+        gt_rgb = gt_rgb.to('cuda:0')
 
         gt_rgb_masked = gt_rgb * mask + (1 - mask) #Immagine originale mascherata
         predicted_rgb_masked = predicted_rgb * mask + (1 - mask) #Immagine renderizzata mascherata
