@@ -4,6 +4,8 @@ Modello FreeNeRF
 
 from __future__ import annotations
 
+import torch
+
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Tuple, Type
 
@@ -95,6 +97,13 @@ class FreeNeRFModel(NeRFModel):
         self.rgb_loss = MSELoss()
 
         # Metrics
+        from torchmetrics.functional import structural_similarity_index_measure
+        from torchmetrics.image import PeakSignalNoiseRatio
+        from torchmetrics.image.lpip import LearnedPerceptualImagePatchSimilarity
+
+        self.psnr = PeakSignalNoiseRatio(data_range=1.0)
+        self.ssim = structural_similarity_index_measure
+        self.lpips = LearnedPerceptualImagePatchSimilarity(normalize=True)
     
     # get_param_groups -> prende quello di vanilla nerf
     '''
@@ -187,9 +196,45 @@ class FreeNeRFModel(NeRFModel):
         return outputs
 
     # get_metrics_dict -> vanilla nerf
-    '''def get_metrics_dict(self, outputs, batch):
+    def get_metrics_dict(self, outputs, batch):
         """Returns metrics dictionary which will be plotted with comet, wandb or tensorboard."""
-    '''
+        metrics_dict = {}
+        gt_rgb = batch["image"].to(self.device)
+        predicted_rgb = outputs["rgb"]
+        mask = batch["mask"] #Maschera binaria che indica le regioni foreground.
+        mask_bin = (mask == 1.) #Maschera binaria con valori booleani.
+
+        # Assicurati che il tensore di maschera sia su cuda:0
+        mask = mask.to('cuda:0')
+        # Sposta anche gt_rgb su cuda:0
+        gt_rgb = gt_rgb.to('cuda:0')
+
+        inverted_mask = ~mask
+        gt_rgb_masked = gt_rgb * mask + inverted_mask #Immagine originale mascherata
+        predicted_rgb_resized = predicted_rgb[:, 0, :] #Rimuoviamo la dimensione densità che non ci serve per il calcolo delle metriche
+        predicted_rgb_masked = predicted_rgb_resized * mask + inverted_mask #Immagine renderizzata mascherata
+
+        metrics_dict["psnr_masked"] = self.psnr(predicted_rgb_masked, gt_rgb_masked)
+
+        gt_rgb_masked_r = torch.moveaxis(gt_rgb_masked, -1, 0)[None, ...]
+
+        # Switch images from [H, W, C] to [1, C, H, W] for metrics computations
+        gt_rgb_masked_r = torch.moveaxis(gt_rgb_masked, -1, 0)[None, ...]
+        #questi passaggi servono per rendere il tensore predicted_rgb delle dimensioni desiderate dalle funzioni per le metriche ssim e lpips
+        
+        density = predicted_rgb.size(dim=1)#Prendo il valore contenuto nella seconda dimensione density, che abbiamo tolto prima 
+        predicted_rgb_masked_prep = torch.unsqueeze(predicted_rgb_masked, 1)#Aggiungo una dimensione di size 1 in seconda posizione
+        predicted_rgb_masked_prep = predicted_rgb_masked_prep.expand(-1, density, -1)#Espande la dimensione appena aggiunta a quella contenuta in density
+
+        predicted_rgb_masked_r = torch.moveaxis(predicted_rgb_masked_prep, -1, 0)[None, ...]
+
+        metrics_dict["ssim_masked"] = self.ssim(predicted_rgb_masked_r, gt_rgb_masked_r)
+        metrics_dict["lpips_masked"] = self.lpips(predicted_rgb_masked_r, gt_rgb_masked_r)
+        
+        #TODO controllare cosa è camera optimizer e in caso come aggiungerlo, usato da nerfacto ma non in vanillanerf
+        #self.camera_optimizer.get_metrics_dict(metrics_dict)
+        return metrics_dict
+    
 
     def get_loss_dict(self, outputs, batch, metrics_dict=None):
         """Returns a dictionary of losses to be summed which will be your loss."""
