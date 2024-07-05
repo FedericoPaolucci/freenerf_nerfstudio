@@ -220,13 +220,13 @@ class FreeNeRFModel(NeRFModel):
 
         # Switch images from [H, W, C] to [1, C, H, W] for metrics computations
         gt_rgb_masked_r = torch.moveaxis(gt_rgb_masked, -1, 0)[None, ...]
-        #questi passaggi servono per rendere il tensore predicted_rgb delle dimensioni desiderate dalle funzioni per le metriche ssim e lpips
+        #questi passaggi servono per rendere il tensore predicted_rgb_masked delle dimensioni desiderate dalle funzioni per le metriche ssim e lpips
         
-        density = predicted_rgb.size(dim=1)#Prendo il valore contenuto nella seconda dimensione density, che abbiamo tolto prima 
-        predicted_rgb_masked_prep = torch.unsqueeze(predicted_rgb_masked, 1)#Aggiungo una dimensione di size 1 in seconda posizione
-        predicted_rgb_masked_prep = predicted_rgb_masked_prep.expand(-1, density, -1)#Espande la dimensione appena aggiunta a quella contenuta in density
+        #density = predicted_rgb.size(dim=1)#Prendo il valore contenuto nella seconda dimensione density, che abbiamo tolto prima 
+        #predicted_rgb_masked_prep = torch.unsqueeze(predicted_rgb_masked, 1)#Aggiungo una dimensione di size 1 in seconda posizione
+       #predicted_rgb_masked_prep = predicted_rgb_masked_prep.expand(-1, density, -1)#Espande la dimensione appena aggiunta a quella contenuta in density
 
-        predicted_rgb_masked_r = torch.moveaxis(predicted_rgb_masked_prep, -1, 0)[None, ...]
+        predicted_rgb_masked_r = torch.moveaxis(predicted_rgb_masked, -1, 0)[None, ...]
 
         metrics_dict["ssim_masked"] = self.ssim(predicted_rgb_masked_r, gt_rgb_masked_r)
         metrics_dict["lpips_masked"] = self.lpips(predicted_rgb_masked_r, gt_rgb_masked_r)
@@ -268,7 +268,6 @@ class FreeNeRFModel(NeRFModel):
         self, outputs: Dict[str, torch.Tensor], batch: Dict[str, torch.Tensor] #se usati bisogna dichiarare le dipendenze
     ) -> Tuple[Dict[str, float], Dict[str, torch.Tensor]]:
         """Returns a dictionary of images and metrics to plot. Here you can apply your colormaps.""" '''
-    #plot loss
 
     # TODO: Override any potential functions/methods to implement your own method
     # or subclass from "Model" and define all mandatory fields.
