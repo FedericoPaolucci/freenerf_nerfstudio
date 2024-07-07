@@ -26,7 +26,7 @@ freenerf_method = MethodSpecification(
         method_name="freenerf-method", #nome del metodo
         steps_per_eval_batch=500, #numero passi tra ogni batch di valutazione
         steps_per_save=2000, #numero di passi tra ogni save
-        max_num_iterations=30000, #numero massimo di iterazioni di training (varia in base alle view)
+        max_num_iterations=43945, #numero massimo di iterazioni di training (varia in base alle view=3)
         mixed_precision=True, #precisione mista (riduce utilizzo di memoria)
         pipeline=VanillaPipelineConfig( 
             datamanager=VanillaDataManagerConfig(
