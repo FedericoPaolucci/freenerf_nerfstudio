@@ -16,6 +16,7 @@ from nerfstudio.engine.callbacks import (
     TrainingCallbackAttributes,
     TrainingCallbackLocation,
 )
+from nerfstudio.model_components.renderers import RGBRenderer
 from nerfstudio.model_components.losses import MSELoss, scale_gradients_by_distance_squared
 from nerfstudio.utils import colormaps, misc
 from nerfstudio.cameras.rays import RayBundle
@@ -34,7 +35,7 @@ class FreeNeRFModelConfig(VanillaModelConfig):
     """Number of frequencies for positional encoding"""
     direction_encoding_num_frequencies: int = 4
     """Number of frequencies for directional encoding"""
-    T: int = 30000
+    T: int = 43945
     """Number of training steps (must equal to max-num-iterations)"""
     loss_coefficients: Dict[str, float] = to_immutable_dict({"rgb_loss_coarse": 1.0, "rgb_loss_fine": 1.0, "occ_reg_loss": 0.01})
     """loss coefficient and Occlusion reg loss molt"""
@@ -92,6 +93,7 @@ class FreeNeRFModel(NeRFModel):
         # Colliders
 
         # Renderers
+        self.renderer_rgb = RGBRenderer(background_color=self.config.background_color)
 
         # Losses
         self.rgb_loss = MSELoss()
@@ -200,19 +202,36 @@ class FreeNeRFModel(NeRFModel):
         """Returns metrics dictionary which will be plotted with comet, wandb or tensorboard."""
         metrics_dict = {}
         gt_rgb = batch["image"].to(self.device)
+        print("STAMPA GT_RGB PRIMA DI FARE RENDERING:", gt_rgb)
+        print("Dimensione:", gt_rgb.shape)
+
+        gt_rgb = self.renderer_rgb.blend_background(gt_rgb)
+        print("STAMPA GT_RGB DOPO FATTO RENDERING:", gt_rgb)
+        print("Dimensione:", gt_rgb.shape)
+
+        image = batch["image"].to(outputs["rgb_coarse"].device)
+        print("STAMPA IMAGE PRESO DA RGB_COARSE:", image)
+        print("Dimensione:", image.shape)
+
         predicted_rgb = outputs["rgb"]
+        print("STAMPA PREDICTED_RGB:", predicted_rgb)
+        print("Dimensione:", predicted_rgb.shape)
+        
         mask = batch["mask"] #Maschera binaria che indica le regioni foreground.
-        mask_bin = (mask == 1.) #Maschera binaria con valori booleani.
+        #mask_bin = (mask == 1.) #Maschera binaria con valori booleani.
 
         # Assicurati che il tensore di maschera sia su cuda:0
         mask = mask.to('cuda:0')
         # Sposta anche gt_rgb su cuda:0
         gt_rgb = gt_rgb.to('cuda:0')
 
+        #Applichiamo la maschera al gt_rgb e predicted_rgb
         inverted_mask = ~mask
         gt_rgb_masked = gt_rgb * mask + inverted_mask #Immagine originale mascherata
         predicted_rgb_resized = predicted_rgb[:, 0, :] #Rimuoviamo la dimensione densità che non ci serve per il calcolo delle metriche
         predicted_rgb_masked = predicted_rgb_resized * mask + inverted_mask #Immagine renderizzata mascherata
+        print("STAMPA PREDICTED_RGB_MASKED:", predicted_rgb_masked)
+        print("Dimensione:", predicted_rgb_masked.shape)
 
         metrics_dict["psnr_masked"] = self.psnr(predicted_rgb_masked, gt_rgb_masked)
 
