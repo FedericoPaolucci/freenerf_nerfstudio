@@ -216,7 +216,8 @@ class FreeNeRFModel(NeRFModel):
 
         metrics_dict["psnr_masked"] = self.psnr(predicted_rgb_masked, gt_rgb_masked)
 
-        gt_rgb_masked_r = torch.moveaxis(gt_rgb_masked, -1, 0)[None, ...]
+         
+        """gt_rgb_masked_r = torch.moveaxis(gt_rgb_masked, -1, 0)[None, ...]
 
         # Switch images from [H, W, C] to [1, C, H, W] for metrics computations
         gt_rgb_masked_r = torch.moveaxis(gt_rgb_masked, -1, 0)[None, ...]
@@ -229,7 +230,7 @@ class FreeNeRFModel(NeRFModel):
         predicted_rgb_masked_r = torch.moveaxis(predicted_rgb_masked_prep, -1, 0)[None, ...]
 
         metrics_dict["ssim_masked"] = self.ssim(predicted_rgb_masked_r, gt_rgb_masked_r)
-        metrics_dict["lpips_masked"] = self.lpips(predicted_rgb_masked_r, gt_rgb_masked_r)
+        metrics_dict["lpips_masked"] = self.lpips(predicted_rgb_masked_r, gt_rgb_masked_r)"""
         
         #TODO controllare cosa è camera optimizer e in caso come aggiungerlo, usato da nerfacto ma non in vanillanerf
         #self.camera_optimizer.get_metrics_dict(metrics_dict)
@@ -264,10 +265,67 @@ class FreeNeRFModel(NeRFModel):
         return loss_dict
 
     # get_image_mertrics_and_images -> prende quello di vanilla nerf
-    '''def get_image_metrics_and_images(
+    def get_image_metrics_and_images(
         self, outputs: Dict[str, torch.Tensor], batch: Dict[str, torch.Tensor] #se usati bisogna dichiarare le dipendenze
     ) -> Tuple[Dict[str, float], Dict[str, torch.Tensor]]:
-        """Returns a dictionary of images and metrics to plot. Here you can apply your colormaps.""" '''
+        """Returns a dictionary of images and metrics to plot. Here you can apply your colormaps.""" 
+        assert self.config.collider_params is not None, "mip-NeRF requires collider parameters to be set."
+        image = batch["image"].to(outputs["rgb_coarse"].device)
+        image = self.renderer_rgb.blend_background(image)
+        rgb_coarse = outputs["rgb_coarse"]
+        rgb_fine = outputs["rgb_fine"]
+        acc_coarse = colormaps.apply_colormap(outputs["accumulation_coarse"])
+        acc_fine = colormaps.apply_colormap(outputs["accumulation_fine"])
+
+        #Parte aggiunta maschera
+        mask = batch["mask"]
+        inverted_mask = ~mask
+        image_masked = image * mask + inverted_mask #Immagine originale mascherata
+        rgb_coarse_masked = rgb_coarse * mask + inverted_mask
+        rgb_fine_masked = rgb_fine * mask + inverted_mask
+        
+
+
+        assert self.config.collider_params is not None
+        depth_coarse = colormaps.apply_depth_colormap(
+            outputs["depth_coarse"],
+            accumulation=outputs["accumulation_coarse"],
+            near_plane=self.config.collider_params["near_plane"],
+            far_plane=self.config.collider_params["far_plane"],
+        )
+        depth_fine = colormaps.apply_depth_colormap(
+            outputs["depth_fine"],
+            accumulation=outputs["accumulation_fine"],
+            near_plane=self.config.collider_params["near_plane"],
+            far_plane=self.config.collider_params["far_plane"],
+        )
+
+        combined_rgb = torch.cat([image, rgb_coarse, rgb_fine], dim=1)
+        combined_acc = torch.cat([acc_coarse, acc_fine], dim=1)
+        combined_depth = torch.cat([depth_coarse, depth_fine], dim=1)
+
+        # Switch images from [H, W, C] to [1, C, H, W] for metrics computations
+        image_r = torch.moveaxis(image_masked, -1, 0)[None, ...]
+        rgb_coarse_r = torch.moveaxis(rgb_coarse_masked, -1, 0)[None, ...]
+        rgb_fine_r = torch.moveaxis(rgb_fine_masked, -1, 0)[None, ...]
+        rgb_coarse_r = torch.clip(rgb_coarse_r, min=0, max=1)
+        rgb_fine_r = torch.clip(rgb_fine_r, min=0, max=1)
+
+        coarse_psnr = self.psnr(image_r, rgb_coarse_r)
+        fine_psnr = self.psnr(image_r, rgb_fine_r)
+        fine_ssim = self.ssim(image_r, rgb_fine_r)
+        fine_lpips = self.lpips(image_r, rgb_fine_r)
+
+        assert isinstance(fine_ssim, torch.Tensor)
+        metrics_dict = {
+            "psnr": float(fine_psnr.item()),
+            "coarse_psnr": float(coarse_psnr.item()),
+            "fine_psnr": float(fine_psnr.item()),
+            "fine_ssim": float(fine_ssim.item()),
+            "fine_lpips": float(fine_lpips.item()),
+        }
+        images_dict = {"img": combined_rgb, "accumulation": combined_acc, "depth": combined_depth}
+        return metrics_dict, images_dict
     #plot loss
 
     # TODO: Override any potential functions/methods to implement your own method
