@@ -34,13 +34,13 @@ class FreeNeRFModelConfig(VanillaModelConfig):
     """Number of frequencies for positional encoding"""
     direction_encoding_num_frequencies: int = 4
     """Number of frequencies for directional encoding"""
-    T: int = 43945
-    """Number of training steps (must equal to max-num-iterations)"""
+    T: int = 39550
+    """Number of training steps (max-num-iterations*0.9)"""
     loss_coefficients: Dict[str, float] = to_immutable_dict({"rgb_loss_coarse": 1.0, "rgb_loss_fine": 1.0, "occ_reg_loss": 0.01})
     """loss coefficient and Occlusion reg loss molt"""
-    reg_range = 10
+    reg_range = 15 #10
     """Number of initial intervals to include in the regularization mask (occ reg loss)"""
-    wb_prior = False
+    wb_prior = True
     """If True, a prior based on the assumption of white or black backgrounds is used (occ reg loss)"""
     wb_range=20
     """Range of RGB values considered to be a white or black background (occ reg loss)"""
