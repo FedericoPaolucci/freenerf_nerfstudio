@@ -202,6 +202,7 @@ class FreeNeRFModel(NeRFModel):
         gt_rgb = batch["image"].to(self.device)
         predicted_rgb = outputs["rgb"]
         predicted_rgb_fine = outputs["rgb_fine"]
+        predicted_rgb_coarse = outputs["rgb_coarse"]
         mask = batch["mask"] #Maschera binaria che indica le regioni foreground.
         mask_bin = (mask == 1.) #Maschera binaria con valori booleani.
 
@@ -212,9 +213,11 @@ class FreeNeRFModel(NeRFModel):
 
         #Aggiunta metrica psnr senza aggiunta delle maschere
         metrics_dict["psnr_fine"] = self.psnr( predicted_rgb_fine, gt_rgb)
-        metrics_dict["psnr"] = self.psnr( predicted_rgb, gt_rgb)
-        metrics_dict["ssim"] = self.ssim( predicted_rgb, gt_rgb)
-        metrics_dict["lpips"] = self.lpips( predicted_rgb, gt_rgb)
+        metrics_dict["psnr_coarse"] = self.psnr( predicted_rgb_coarse, gt_rgb)
+
+        #metrics_dict["psnr"] = self.psnr( predicted_rgb, gt_rgb)
+        metrics_dict["ssim_fine"] = self.ssim( predicted_rgb_fine, gt_rgb)
+        metrics_dict["lpips_fine"] = self.lpips( predicted_rgb_fine, gt_rgb)
 
         #Aggiunta maschera
         inverted_mask = ~mask
