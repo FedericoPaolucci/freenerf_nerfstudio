@@ -211,7 +211,7 @@ class FreeNeRFModel(NeRFModel):
         gt_rgb = gt_rgb.to('cuda:0')
 
         #Aggiunta metrica psnr senza aggiunta delle maschere
-        metrics_dict["psnr_fine"] = self.psnr(( predicted_rgb_fine, gt_rgb))
+        metrics_dict["psnr_fine"] = self.psnr( predicted_rgb_fine, gt_rgb)
         metrics_dict["psnr"] = self.psnr( predicted_rgb, gt_rgb)
         metrics_dict["ssim"] = self.ssim( predicted_rgb, gt_rgb)
         metrics_dict["lpips"] = self.lpips( predicted_rgb, gt_rgb)
