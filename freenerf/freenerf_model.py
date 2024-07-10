@@ -216,12 +216,19 @@ class FreeNeRFModel(NeRFModel):
         metrics_dict["psnr_coarse"] = self.psnr( predicted_rgb_coarse, gt_rgb)
 
         #metrics_dict["psnr"] = self.psnr( predicted_rgb, gt_rgb)
-        metrics_dict["ssim_fine"] = self.ssim( predicted_rgb_fine, gt_rgb)
-        metrics_dict["lpips_fine"] = self.lpips( predicted_rgb_fine, gt_rgb)
+        #metrics_dict["ssim_fine"] = self.ssim( predicted_rgb_fine, gt_rgb)
+        #metrics_dict["lpips_fine"] = self.lpips( predicted_rgb_fine, gt_rgb)
 
         #Aggiunta maschera
         inverted_mask = ~mask
         gt_rgb_masked = gt_rgb * mask + inverted_mask #Immagine originale mascherata
+        predicted_rgb_fine_masked = predicted_rgb_fine * mask + inverted_mask
+        predicted_rgb_coarse_masked = predicted_rgb_coarse * mask + inverted_mask
+
+        metrics_dict["psnr_fine_masked"] = self.psnr(predicted_rgb_fine_masked, gt_rgb_masked)
+        metrics_dict["psnr_coarse_masked"] = self.psnr(predicted_rgb_coarse_masked, gt_rgb_masked)
+
+
         predicted_rgb_resized = predicted_rgb[:, 0, :] #Rimuoviamo la dimensione densità che non ci serve per il calcolo delle metriche
         predicted_rgb_masked = predicted_rgb_resized * mask + inverted_mask #Immagine renderizzata mascherata
 
