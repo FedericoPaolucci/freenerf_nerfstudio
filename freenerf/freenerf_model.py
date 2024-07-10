@@ -209,6 +209,10 @@ class FreeNeRFModel(NeRFModel):
         # Sposta anche gt_rgb su cuda:0
         gt_rgb = gt_rgb.to('cuda:0')
 
+        #Aggiunta metrica psnr senza aggiunta delle maschere
+        metrics_dict["psnr"] = self.psnr(predicted_rgb, gt_rgb)
+
+        #Aggiunta maschera
         inverted_mask = ~mask
         gt_rgb_masked = gt_rgb * mask + inverted_mask #Immagine originale mascherata
         predicted_rgb_resized = predicted_rgb[:, 0, :] #Rimuoviamo la dimensione densità che non ci serve per il calcolo delle metriche
