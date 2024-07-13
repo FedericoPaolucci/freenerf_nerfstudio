@@ -38,8 +38,8 @@ freenerf_method = MethodSpecification(
         ),
         optimizers={
             "fields": {
-                "optimizer": AdamOptimizerConfig(lr=2e-3, eps=1e-08), # originale lr=5e-4 (learning rate), eps=1e-08 (epsilon) -> lr usare da 2e-3 a 2e-5
-                "scheduler": ExponentialDecaySchedulerConfig(warmup_steps=512,lr_final=2e-5, max_steps=43945, ramp= "linear"),
+                "optimizer": AdamOptimizerConfig(lr=2e-3, eps=1e-08, max_norm=0.1), # originale lr=5e-4 (learning rate), eps=1e-08 (epsilon) -> lr usare da 2e-3 a 2e-5; max_norm per il clip del gradiente (no nan)
+                "scheduler": ExponentialDecaySchedulerConfig(warmup_steps=512, lr_final=2e-5, max_steps=43945, ramp = "linear"), #warmup per far partire il training a un lr piu basso
             },
             "temporal_distortion": {
                 "optimizer": AdamOptimizerConfig(lr=2e-3, eps=1e-08), # originale lr=5e-4, eps=1e-08

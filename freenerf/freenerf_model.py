@@ -275,7 +275,7 @@ class FreeNeRFModel(NeRFModel):
         rgb_loss_coarse = self.rgb_loss(coarse_image, coarse_pred) # MSELoss (ground truth e predizione)
         rgb_loss_fine = self.rgb_loss(fine_image, fine_pred)
         # occlusion regulation loss (rgb, density)
-        occ_reg_loss = occ_reg_loss_fn(outputs["rgb_fine"], outputs["accumulation_fine"], reg_range=self.config.reg_range, wb_prior=self.config.wb_prior, wb_range=self.config.wb_range)
+        occ_reg_loss = occ_reg_loss_fn(outputs["rgb"], outputs["accumulation_fine"], reg_range=self.config.reg_range, wb_prior=self.config.wb_prior, wb_range=self.config.wb_range)
         # creazione dict
         loss_dict = {"rgb_loss_coarse": rgb_loss_coarse, "rgb_loss_fine": rgb_loss_fine, "occ_reg_loss": occ_reg_loss}
         # scalatura loss
