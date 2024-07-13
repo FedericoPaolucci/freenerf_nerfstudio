@@ -26,11 +26,11 @@ freenerf_method = MethodSpecification(
         method_name="freenerf-method", #nome del metodo
         steps_per_eval_batch=500, #numero passi tra ogni batch di valutazione
         steps_per_save=2000, #numero di passi tra ogni save
-        max_num_iterations=43945, #numero massimo di iterazioni di training (varia in base alle view=3)
+        max_num_iterations=43945, #numero massimo di iterazioni di training (varia in base alle view)
         mixed_precision=True, #precisione mista (riduce utilizzo di memoria)
         pipeline=VanillaPipelineConfig( 
             datamanager=VanillaDataManagerConfig(
-                dataparser=NerfstudioDataParserConfig(), # datamanager e dataparser di nerfstudio
+                dataparser=NerfstudioDataParserConfig( eval_mode="filename"), # datamanager e dataparser di nerfstudio
                 train_num_rays_per_batch=4096,
                 eval_num_rays_per_batch=4096,
             ),
@@ -38,8 +38,8 @@ freenerf_method = MethodSpecification(
         ),
         optimizers={
             "fields": {
-                "optimizer": AdamOptimizerConfig(lr=2e-3, eps=1e-08), # originale lr=5e-4 (learning rate), eps=1e-08 (epsilon) -> lr usare da 2e-3 a 2e-5
-                "scheduler": None,
+                "optimizer": AdamOptimizerConfig(lr=2e-3, eps=1e-08, max_norm=0.1), # originale lr=5e-4 (learning rate), eps=1e-08 (epsilon) -> lr usare da 2e-3 a 2e-5; max_norm per il clip del gradiente (no nan)
+                "scheduler": ExponentialDecaySchedulerConfig(warmup_steps=512, lr_final=2e-5, max_steps=43945, ramp = "linear"), #warmup per far partire il training a un lr piu basso
             },
             "temporal_distortion": {
                 "optimizer": AdamOptimizerConfig(lr=2e-3, eps=1e-08), # originale lr=5e-4, eps=1e-08

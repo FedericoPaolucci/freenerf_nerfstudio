@@ -16,7 +16,6 @@ from nerfstudio.engine.callbacks import (
     TrainingCallbackAttributes,
     TrainingCallbackLocation,
 )
-from nerfstudio.model_components.renderers import RGBRenderer
 from nerfstudio.model_components.losses import MSELoss, scale_gradients_by_distance_squared
 from nerfstudio.utils import colormaps, misc
 from nerfstudio.cameras.rays import RayBundle
@@ -35,13 +34,13 @@ class FreeNeRFModelConfig(VanillaModelConfig):
     """Number of frequencies for positional encoding"""
     direction_encoding_num_frequencies: int = 4
     """Number of frequencies for directional encoding"""
-    T: int = 43945
-    """Number of training steps (must equal to max-num-iterations)"""
+    T: int = 39550
+    """Number of training steps (max-num-iterations*0.9)"""
     loss_coefficients: Dict[str, float] = to_immutable_dict({"rgb_loss_coarse": 1.0, "rgb_loss_fine": 1.0, "occ_reg_loss": 0.01})
     """loss coefficient and Occlusion reg loss molt"""
-    reg_range = 10
+    reg_range = 15 #10
     """Number of initial intervals to include in the regularization mask (occ reg loss)"""
-    wb_prior = False
+    wb_prior = True
     """If True, a prior based on the assumption of white or black backgrounds is used (occ reg loss)"""
     wb_range=20
     """Range of RGB values considered to be a white or black background (occ reg loss)"""
@@ -93,7 +92,6 @@ class FreeNeRFModel(NeRFModel):
         # Colliders
 
         # Renderers
-        self.renderer_rgb = RGBRenderer(background_color=self.config.background_color)
 
         # Losses
         self.rgb_loss = MSELoss()
@@ -202,53 +200,55 @@ class FreeNeRFModel(NeRFModel):
         """Returns metrics dictionary which will be plotted with comet, wandb or tensorboard."""
         metrics_dict = {}
         gt_rgb = batch["image"].to(self.device)
-        print("STAMPA GT_RGB PRIMA DI FARE RENDERING:", gt_rgb)
-        print("Dimensione:", gt_rgb.shape)
-
-        gt_rgb = self.renderer_rgb.blend_background(gt_rgb)
-        print("STAMPA GT_RGB DOPO FATTO RENDERING:", gt_rgb)
-        print("Dimensione:", gt_rgb.shape)
-
-        image = batch["image"].to(outputs["rgb_coarse"].device)
-        print("STAMPA IMAGE PRESO DA RGB_COARSE:", image)
-        print("Dimensione:", image.shape)
-
         predicted_rgb = outputs["rgb"]
-        print("STAMPA PREDICTED_RGB:", predicted_rgb)
-        print("Dimensione:", predicted_rgb.shape)
-        
+        predicted_rgb_fine = outputs["rgb_fine"]
+        predicted_rgb_coarse = outputs["rgb_coarse"]
         mask = batch["mask"] #Maschera binaria che indica le regioni foreground.
-        #mask_bin = (mask == 1.) #Maschera binaria con valori booleani.
+        mask_bin = (mask == 1.) #Maschera binaria con valori booleani.
 
         # Assicurati che il tensore di maschera sia su cuda:0
         mask = mask.to('cuda:0')
         # Sposta anche gt_rgb su cuda:0
         gt_rgb = gt_rgb.to('cuda:0')
 
-        #Applichiamo la maschera al gt_rgb e predicted_rgb
+        #Aggiunta metrica psnr senza aggiunta delle maschere
+        metrics_dict["psnr_fine"] = self.psnr( predicted_rgb_fine, gt_rgb)
+        metrics_dict["psnr_coarse"] = self.psnr( predicted_rgb_coarse, gt_rgb)
+
+        #metrics_dict["psnr"] = self.psnr( predicted_rgb, gt_rgb)
+        #metrics_dict["ssim_fine"] = self.ssim( predicted_rgb_fine, gt_rgb)
+        #metrics_dict["lpips_fine"] = self.lpips( predicted_rgb_fine, gt_rgb)
+
+        #Aggiunta maschera
         inverted_mask = ~mask
         gt_rgb_masked = gt_rgb * mask + inverted_mask #Immagine originale mascherata
+        predicted_rgb_fine_masked = predicted_rgb_fine * mask + inverted_mask
+        predicted_rgb_coarse_masked = predicted_rgb_coarse * mask + inverted_mask
+
+        metrics_dict["psnr_fine_masked"] = self.psnr(predicted_rgb_fine_masked, gt_rgb_masked)
+        metrics_dict["psnr_coarse_masked"] = self.psnr(predicted_rgb_coarse_masked, gt_rgb_masked)
+
+
         predicted_rgb_resized = predicted_rgb[:, 0, :] #Rimuoviamo la dimensione densità che non ci serve per il calcolo delle metriche
         predicted_rgb_masked = predicted_rgb_resized * mask + inverted_mask #Immagine renderizzata mascherata
-        print("STAMPA PREDICTED_RGB_MASKED:", predicted_rgb_masked)
-        print("Dimensione:", predicted_rgb_masked.shape)
 
         metrics_dict["psnr_masked"] = self.psnr(predicted_rgb_masked, gt_rgb_masked)
 
-        gt_rgb_masked_r = torch.moveaxis(gt_rgb_masked, -1, 0)[None, ...]
+         
+        """gt_rgb_masked_r = torch.moveaxis(gt_rgb_masked, -1, 0)[None, ...]
 
         # Switch images from [H, W, C] to [1, C, H, W] for metrics computations
         gt_rgb_masked_r = torch.moveaxis(gt_rgb_masked, -1, 0)[None, ...]
-        #questi passaggi servono per rendere il tensore predicted_rgb_masked delle dimensioni desiderate dalle funzioni per le metriche ssim e lpips
+        #questi passaggi servono per rendere il tensore predicted_rgb delle dimensioni desiderate dalle funzioni per le metriche ssim e lpips
         
-        #density = predicted_rgb.size(dim=1)#Prendo il valore contenuto nella seconda dimensione density, che abbiamo tolto prima 
-        #predicted_rgb_masked_prep = torch.unsqueeze(predicted_rgb_masked, 1)#Aggiungo una dimensione di size 1 in seconda posizione
-       #predicted_rgb_masked_prep = predicted_rgb_masked_prep.expand(-1, density, -1)#Espande la dimensione appena aggiunta a quella contenuta in density
+        density = predicted_rgb.size(dim=1)#Prendo il valore contenuto nella seconda dimensione density, che abbiamo tolto prima 
+        predicted_rgb_masked_prep = torch.unsqueeze(predicted_rgb_masked, 1)#Aggiungo una dimensione di size 1 in seconda posizione
+        predicted_rgb_masked_prep = predicted_rgb_masked_prep.expand(-1, density, -1)#Espande la dimensione appena aggiunta a quella contenuta in density
 
-        predicted_rgb_masked_r = torch.moveaxis(predicted_rgb_masked, -1, 0)[None, ...]
+        predicted_rgb_masked_r = torch.moveaxis(predicted_rgb_masked_prep, -1, 0)[None, ...]
 
         metrics_dict["ssim_masked"] = self.ssim(predicted_rgb_masked_r, gt_rgb_masked_r)
-        metrics_dict["lpips_masked"] = self.lpips(predicted_rgb_masked_r, gt_rgb_masked_r)
+        metrics_dict["lpips_masked"] = self.lpips(predicted_rgb_masked_r, gt_rgb_masked_r)"""
         
         #TODO controllare cosa è camera optimizer e in caso come aggiungerlo, usato da nerfacto ma non in vanillanerf
         #self.camera_optimizer.get_metrics_dict(metrics_dict)
@@ -274,8 +274,8 @@ class FreeNeRFModel(NeRFModel):
         # calcolo loss 
         rgb_loss_coarse = self.rgb_loss(coarse_image, coarse_pred) # MSELoss (ground truth e predizione)
         rgb_loss_fine = self.rgb_loss(fine_image, fine_pred)
-        # occlusion regulation loss
-        occ_reg_loss = occ_reg_loss_fn(outputs["rgb"], outputs["density"], reg_range=self.config.reg_range, wb_prior=self.config.wb_prior, wb_range=self.config.wb_range)
+        # occlusion regulation loss (rgb, density)
+        occ_reg_loss = occ_reg_loss_fn(outputs["rgb"], outputs["accumulation_fine"], reg_range=self.config.reg_range, wb_prior=self.config.wb_prior, wb_range=self.config.wb_range)
         # creazione dict
         loss_dict = {"rgb_loss_coarse": rgb_loss_coarse, "rgb_loss_fine": rgb_loss_fine, "occ_reg_loss": occ_reg_loss}
         # scalatura loss
@@ -283,10 +283,68 @@ class FreeNeRFModel(NeRFModel):
         return loss_dict
 
     # get_image_mertrics_and_images -> prende quello di vanilla nerf
-    '''def get_image_metrics_and_images(
+    def get_image_metrics_and_images(
         self, outputs: Dict[str, torch.Tensor], batch: Dict[str, torch.Tensor] #se usati bisogna dichiarare le dipendenze
     ) -> Tuple[Dict[str, float], Dict[str, torch.Tensor]]:
-        """Returns a dictionary of images and metrics to plot. Here you can apply your colormaps.""" '''
+        """Returns a dictionary of images and metrics to plot. Here you can apply your colormaps.""" 
+        assert self.config.collider_params is not None, "mip-NeRF requires collider parameters to be set."
+        image = batch["image"].to(outputs["rgb_coarse"].device)
+        image = self.renderer_rgb.blend_background(image)
+        rgb_coarse = outputs["rgb_coarse"]
+        rgb_fine = outputs["rgb_fine"]
+        acc_coarse = colormaps.apply_colormap(outputs["accumulation_coarse"])
+        acc_fine = colormaps.apply_colormap(outputs["accumulation_fine"])
+
+        #Parte aggiunta maschera
+        mask = batch["mask"]
+        inverted_mask = ~mask
+        image_masked = image * mask + inverted_mask #Immagine originale mascherata
+        rgb_coarse_masked = rgb_coarse * mask + inverted_mask
+        rgb_fine_masked = rgb_fine * mask + inverted_mask
+        
+
+
+        assert self.config.collider_params is not None
+        depth_coarse = colormaps.apply_depth_colormap(
+            outputs["depth_coarse"],
+            accumulation=outputs["accumulation_coarse"],
+            near_plane=self.config.collider_params["near_plane"],
+            far_plane=self.config.collider_params["far_plane"],
+        )
+        depth_fine = colormaps.apply_depth_colormap(
+            outputs["depth_fine"],
+            accumulation=outputs["accumulation_fine"],
+            near_plane=self.config.collider_params["near_plane"],
+            far_plane=self.config.collider_params["far_plane"],
+        )
+
+        combined_rgb = torch.cat([image, rgb_coarse, rgb_fine], dim=1)
+        combined_acc = torch.cat([acc_coarse, acc_fine], dim=1)
+        combined_depth = torch.cat([depth_coarse, depth_fine], dim=1)
+
+        # Switch images from [H, W, C] to [1, C, H, W] for metrics computations
+        image_r = torch.moveaxis(image_masked, -1, 0)[None, ...]
+        rgb_coarse_r = torch.moveaxis(rgb_coarse_masked, -1, 0)[None, ...]
+        rgb_fine_r = torch.moveaxis(rgb_fine_masked, -1, 0)[None, ...]
+        rgb_coarse_r = torch.clip(rgb_coarse_r, min=0, max=1)
+        rgb_fine_r = torch.clip(rgb_fine_r, min=0, max=1)
+
+        coarse_psnr = self.psnr(image_r, rgb_coarse_r)
+        fine_psnr = self.psnr(image_r, rgb_fine_r)
+        fine_ssim = self.ssim(image_r, rgb_fine_r)
+        fine_lpips = self.lpips(image_r, rgb_fine_r)
+
+        assert isinstance(fine_ssim, torch.Tensor)
+        metrics_dict = {
+            "psnr": float(fine_psnr.item()),
+            "coarse_psnr": float(coarse_psnr.item()),
+            "fine_psnr": float(fine_psnr.item()),
+            "fine_ssim": float(fine_ssim.item()),
+            "fine_lpips": float(fine_lpips.item()),
+        }
+        images_dict = {"img": combined_rgb, "accumulation": combined_acc, "depth": combined_depth}
+        return metrics_dict, images_dict
+    #plot loss
 
     # TODO: Override any potential functions/methods to implement your own method
     # or subclass from "Model" and define all mandatory fields.
