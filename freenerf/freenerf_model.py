@@ -80,11 +80,14 @@ class FreeNeRFModel(NeRFModel):
         self.field_coarse = NeRFField(
             position_encoding=position_encoding,
             direction_encoding=direction_encoding,
+            use_integrated_encoding=True
         )
 
         self.field_fine = NeRFField(
             position_encoding=position_encoding,
             direction_encoding=direction_encoding,
+            use_integrated_encoding=True
+
         )
 
         # Ray Samplers
@@ -121,6 +124,9 @@ class FreeNeRFModel(NeRFModel):
             self.step = step # imposta lo step attuale
             self.field_coarse.position_encoding.set_ratio_x(step / self.config.T) # set del ratio con t/T che nell'encoding verrà moltiplicato per L come da paper freenerf
             self.field_coarse.direction_encoding.set_ratio_x(step / self.config.T) # set del ratio come sopra
+            self.field_fine.position_encoding.set_ratio_x(step / self.config.T) # set del ratio con t/T che nell'encoding verrà moltiplicato per L come da paper freenerf
+            self.field_fine.direction_encoding.set_ratio_x(step / self.config.T) # set del ratio come sopra
+
 
         return [
             TrainingCallback(
